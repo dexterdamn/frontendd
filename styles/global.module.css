@@ -1,0 +1,89 @@
+.container{
+  display: contents;
+  background-color: rgb(255, 255, 255);
+  color: black;
+}
+
+
+
+
+.navLinks {
+  
+  list-style: none;
+  display: flex;
+  padding: 50px;
+  gap: 85px; /* Slightly reduce gap for compactness */
+  text-decoration: none;
+  color: black;
+  position: relative; /* Required for the arrow positioning */
+}
+
+
+.contentWrapper {
+  height: -100px; /* Full viewport height */
+ display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 60px 40px; /* Adjust padding */
+  margin-top: 100px;
+}
+
+.leftSection {
+  
+  margin-top: -170px;
+  flex: 1;
+  padding-right: 20px;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: bold;
+ 
+}
+
+
+.highlight {
+  color: #0070f3;
+  
+}
+
+.description {
+  margin-top: 10px;
+  font-size: 1.2rem;
+  line-height: 1.8; /* Adjust line height */
+  margin-bottom: 1.5rem; /* Adjust margin to create space between paragraphs */
+  
+}
+
+
+
+.rightSection {
+  
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+
+.img {
+    width: 480%; /* Adjust width as needed */
+    max-width: 2000px; /* Set maximum width */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 10px;
+    margin-top: -150px; /* Adjust image position */
+    margin-right: 10px; /* Adjust image position */
+    
+  }
+.logo img {
+  display: block;
+  border-radius: 10px;
+  max-height: 50px; /* Adjust logo size */
+  width: auto;
+}
+
+.section{
+ margin-left: -300px;
+ font-size: 20px;
+ font-family: sans-serif;
+}
