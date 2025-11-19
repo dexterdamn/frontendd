@@ -51,7 +51,7 @@ const fetchResults = async () => {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
       <h1 className="text-3xl font-bold text-center text-indigo-700 mb-8">EXAM RESULTS</h1>
 
       {loading ? (
@@ -78,11 +78,14 @@ const fetchResults = async () => {
                     </div>
                   </td>
                   {/* <td className="py-3 px-4 text-gray-600">{result.description}</td> */}
-                  <td className="py-3 px-4 text-gray-600">
-                    {result.date_taken !== "N/A"
-                      ? new Date(result.date_taken).toLocaleDateString()
-                      : "N/A"}
-                  </td>
+            <td className="py-3 px-4 text-gray-600">
+              {result.date_taken !== "N/A"
+                ? new Date(result.date_taken).toLocaleDateString("en-US", {
+                    timeZone: "UTC", // 👈 prevent local timezone shift
+                  })
+                : "N/A"}
+            </td>
+
                   <td className="py-3 px-4">
                     <span className={
                       result.score === "Pending"

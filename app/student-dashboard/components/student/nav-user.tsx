@@ -127,8 +127,8 @@ const handleLogout = () => {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <ModeToggle/>Theme
+            <ThemeProvider  attribute="class" defaultTheme="system" enableSystem >
+              <ModeToggle  />Theme
              
             </ThemeProvider>
             <DropdownMenuGroup>
@@ -136,14 +136,14 @@ const handleLogout = () => {
                 <BadgeCheck />
                 Accounts
               </DropdownMenuItem> */}
-              <DropdownMenuItem>
+              {/* <DropdownMenuItem>
                 <Bell />
                 Notifications
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="cursor-pointer"/>
+            <DropdownMenuItem  className="cursor-pointer" onClick={handleLogout}>
+              <LogOut/>
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

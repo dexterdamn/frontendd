@@ -55,12 +55,12 @@ const handleSubmit = async (event) => {
 
 
     return (
-        <div className="modal-overlay">
-            <div className="fade-modal">
-                <span className="close-button" onClick={onClose}>&times;</span>
-                <h2 className="text-xl font-semibold mb-4 text-center dark:text-black">{exam ? 'Edit Exam' : 'Create Exam'}</h2>
+        <div className="modal-overlay font-sans">
+            <div className="fade-modal dark:bg-gray-800">
+                <span className="close-button " onClick={onClose}>&times;</span>
+                <h2 className="text-2xl font-semibold mb-4 text-center dark:text-black ">{exam ? 'Edit Exam' : 'Create Exam'}</h2>
               <form onSubmit={handleSubmit}>
-    <label className="block mb-4">
+    <label className="block mb-4 ">
         <input
             type="text"
             value={title}
@@ -79,14 +79,23 @@ const handleSubmit = async (event) => {
             className="border border-gray-300 rounded-md w-full p-2 dark:text-black"
         />
     </label>
-    <div className="flex justify-between">
-        <Button type="submit" className="bg-gray-800 text-white rounded-md py-2 px-4 hover:bg-gray-700">
-            Save
-        </Button>
-        <Button type="button" className="bg-red-500 text-white rounded-md py-2 px-4 hover:bg-red-600" onClick={onClose}>
-            Cancel
-        </Button>
-    </div>
+<div className="flex justify-end gap-2 mt-4">
+  <Button
+    type="button"
+    onClick={onClose}
+    className="border border-gray-300 text-gray-800 cursor-pointer bg-white hover:bg-gray-100 rounded-md px-5 py-2 font-medium transition-colors dark:text-black dark:border-gray-600 dark:bg-transparent dark:hover:bg-gray-300"
+  >
+    Cancel
+  </Button>
+
+  <Button
+    type="submit"
+    className="bg-black text-white rounded-md px-5 py-2 cursor-pointer font-medium hover:bg-gray-800  transition-colors"
+  >
+    Continue
+  </Button>
+</div>
+
 </form>
 
             </div>

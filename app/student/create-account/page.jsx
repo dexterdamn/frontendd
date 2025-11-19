@@ -95,7 +95,7 @@ export default function CreateAccountPage() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-blue-100 flex items-center justify-center px-4 py-10">
+    <div className="w-full min-h-screen bg-blue-100 flex items-center justify-center px-4 py-10 font-sans">
       <div className="flex flex-col md:flex-row gap-10 w-full max-w-7xl">
         {/* LEFT: FORM */}
         <form

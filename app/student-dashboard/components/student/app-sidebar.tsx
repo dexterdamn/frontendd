@@ -181,6 +181,7 @@ export function SideBar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [email, setEmail] = useState("");
 
 
+
  useEffect(() => {
     if (typeof window !== "undefined") {
       const firstName = localStorage.getItem("firstName") || "";

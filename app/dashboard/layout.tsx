@@ -31,14 +31,14 @@ export default function DashboardLayout({
   return (
     // <html lang="en" suppressHydrationWarning>
     //   <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <SidebarProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem >
+          <SidebarProvider >
             {/* <div className="flex h-screen"> */}
               <AppSidebar />
-              <SidebarInset className="flex-1">
+              <SidebarInset className="flex-1 ">
                 <header className="flex h-16 items-center gap-2 z-50">
                   <div className="flex items-center gap-2 px-4 ">
-                    <SidebarTrigger className="-ml-1" />
+                    <SidebarTrigger className="-ml-1 " />
                     {/* <ModeToggle /> */}
                     
                     <Separator

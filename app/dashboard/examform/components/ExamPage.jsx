@@ -196,33 +196,27 @@ await axios.put(`http://localhost:5000/admin/exams/${exam.id}`, {
   };
 
   return (
-    <div className="p-6">
-      <Button
-        // onClick={() => router.push("/dashboard")}
-        className="text-4xl text-black bg-white font-bold mb-6 -ml-6 dark:bg-black dark:text-white hover:bg-gray-0 "
-      >
+    <div className="p-6 font-sans">
+          <h1 className="text-xl self-center font-bold text-black dark:text-white mb-4">
         Exam
-      </Button>
-
+      </h1>
+   
+      
       <div className="flex mb-4 ">
-        <div className=" flex justify-center mb-4 border border-gray-300 cursor-pointer hover:border-blue-500 rounded-md p-4 transition-colors w-20">
+        <div className="  ">
           <Button
             onClick={() => {
               setEditingExam(null);
               setModalOpen(true);
             }}
-            className="rounded-md py-2 px-1 text-7xl flex items-center justify-center bg-transparent hover:bg-transparent cursor-pointer"
+              className=" bg-black text-white rounded-md py-2 px-4 hover:bg-gray-900 cursor-pointer dark:bg-gray-900"
 
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-12 w-17"style={{ height: '48px', width: '48px' }} >
-              <rect x="10" y="4" width="4" height="16" fill="#EA4335" />
-              <rect x="4" y="10" width="16" height="4" fill="#34A853" />
-              <rect x="0" y="0" width="24" height="24" fill="none" />
-            </svg>
+           Create Exam
           </Button>
         </div>
       </div>
-
+      
       {isModalOpen && (
         <ExamFormModal
           exam={editingExam}
@@ -279,7 +273,7 @@ await axios.put(`http://localhost:5000/admin/exams/${exam.id}`, {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Link href={`/dashboard/exam/${exam.id}`}>
-                    <Button className="flex items-center p-2 border rounded w-full gap-2 cursor-pointer hover:bg-gray-500 dark:hover:bg-gray-400">
+                    <Button className="flex items-center p-2 border bg-white text-black rounded w-full gap-2 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-400">
                       <FaExternalLinkAlt className=" mr-1" /> View
                     </Button>
                   </Link>
@@ -288,7 +282,7 @@ await axios.put(`http://localhost:5000/admin/exams/${exam.id}`, {
                       e.preventDefault();
                       handleEditExam(exam);
                     }}
-                    className="flex items-center p-2 border rounded w-full gap-2 cursor-pointer ml-0 hover:bg-gray-500 dark:hover:bg-gray-400"
+                    className="flex items-center p-2 border bg-white text-black rounded w-full gap-2 cursor-pointer ml-0 hover:bg-gray-300 dark:hover:bg-gray-400"
                   >
                     <FaEdit className="-ml-3"/>  Edit
                   </Button>
@@ -297,14 +291,14 @@ await axios.put(`http://localhost:5000/admin/exams/${exam.id}`, {
                       e.preventDefault();
                       handleDelete(exam.id);
                     }}
-                    className="flex items-center p-2 border rounded w-full gap-2 cursor-pointer hover:bg-gray-500 dark:hover:bg-gray-400"
+                    className="flex items-center p-2 border bg-white text-black rounded w-full gap-2 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-400"
                   >
                     <FaTrash /> Delete
                   </Button>
         <p onClick={() => {
     navigator.clipboard.writeText(exam.join_code);
     toast.success("Copied!");
-  }}  className="text-blue-700 font-mono mt-1">
+  }}  className="text-black font-mono mt-2 font-bold bg-white text-black hover:bg-gray-300 dark:hover:bg-gray-400">
    
  code:<strong>{exam.join_code}</strong>
 </p>

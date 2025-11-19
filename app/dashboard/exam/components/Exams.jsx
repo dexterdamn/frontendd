@@ -4,6 +4,16 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react"; 
+
+import { ArrowRightIcon } from "lucide-react";
+
+import {
   createQuestion,
   getQuestionsByExam,
   deleteQuestion,
@@ -17,10 +27,13 @@ import { toast } from 'sonner';
 import { Button } from "@/components/ui/button";
 import { FaEdit, FaTrash, FaLock, FaUnlock, FaClipboardList } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
-import { FaPlus } from "react-icons/fa6";
+
+import { IoArrowBackSharp } from "react-icons/io5";
+
+import { TbGitBranch } from "react-icons/tb";
 
 export default function Exams() {
-  const [isLocked, setIsLocked] = useState(false);
+  const [isLocked, setIsLocked] = useState(true);
   const [examId, setExamId] = useState('');
   const [questions, setQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState({
@@ -62,15 +75,28 @@ export default function Exams() {
     }
   };
 
-  const fetchExamLockStatus = async (id) => {
-    try {
-      const res = await getExamById(id);
-      setIsLocked(res.data.locked);
-    } catch (error) {
-      toast.error("Failed to get exam lock status");
-    }
-  };
+const fetchExamLockStatus = async (id) => {
+  try {
+    const res = await getExamById(id);
+    const backendLocked = res?.data?.locked ?? false;
 
+    // Fallback: use localStorage if backend has no lock field yet
+    const storedLock = localStorage.getItem(`examLocked_${id}`);
+    const isActuallyLocked =
+      storedLock === "true" ? true : storedLock === "false" ? false : backendLocked;
+
+    setIsLocked(isActuallyLocked);
+
+    // Keep localStorage consistent
+    localStorage.setItem(`examLocked_${id}`, isActuallyLocked ? "true" : "false");
+    localStorage.setItem(`examReady_${id}`, isActuallyLocked ? "false" : "true");
+  } catch (error) {
+    console.error("Failed to fetch lock status:", error);
+    // fallback if backend fails
+    const storedLock = localStorage.getItem(`examLocked_${id}`);
+    setIsLocked(storedLock === "true");
+  }
+};
   const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = {
@@ -150,126 +176,230 @@ const handleSetExam = async () => {
 };
 
 
-  const handleLockToggle = async () => {
-    try {
-      if (isLocked) {
-        await unlockExam(examId);
-        localStorage.setItem(`examLocked_${examId}`, "false");
-        localStorage.setItem(`examReady_${examId}`, "true");
-        toast.success("Exam unlocked");
-      } else {
-        await lockExam(examId);
-        localStorage.setItem(`examLocked_${examId}`, "true");
-        localStorage.setItem(`examReady_${examId}`, "false");
-        toast.success("Exam locked");
-      }
-      setIsLocked(!isLocked);
-      window.dispatchEvent(new Event("storage"));
-    } catch (error) {
-      toast.error("Error toggling lock: " + error.message);
+const handleLockToggle = async () => {
+  try {
+    if (!examId) {
+      toast.error("Exam ID not found");
+      return;
     }
-  };
+
+    if (isLocked) {
+      // Currently locked → UNLOCK exam (students can start)
+      await unlockExam(examId);
+      localStorage.setItem(`examLocked_${examId}`, "false");
+      localStorage.setItem(`examReady_${examId}`, "true");
+      toast.success("Exam unlocked – students can start now");
+      setIsLocked(false);
+    } else {
+      // Currently unlocked → LOCK exam (students cannot start)
+      await lockExam(examId);
+      localStorage.setItem(`examLocked_${examId}`, "true");
+      localStorage.setItem(`examReady_${examId}`, "false");
+      toast.success("Exam locked – students cannot start");
+      setIsLocked(true);
+    }
+
+    window.dispatchEvent(new Event("storage")); // notify student side
+  } catch (error) {
+    toast.error("Error toggling lock: " + error.message);
+  }
+};
+
+
   
 
   return (
-    <div className="container mx-auto p-4 dark:text-white">
-      <div className="mb-4 flex items-center gap-2">
-        {/* <Button onClick={() => router.push('/dashboard/examform')} className="text-blue bg-white dark:bg-white">
-          <FaClipboardList className="text-8xl text-gray-800" />
-        </Button> */}
+    <div className="container mx-auto p-4 dark:text-white font-sans">
+      <div className="mb-4 flex items-center gap-2 ">
+<Button
+  onClick={() => router.push('/dashboard/examform')}
+  className="cursor-pointer text-blue bg-white hover:bg-white dark:bg-transparent dark:hover:bg-transparent "
+>
+  
+  <IoArrowBackSharp className="text-lg " />
+</Button>
+
+ 
+
         <h1 className="text-2xl mb-0 font-semibold">Manage Questions</h1>
       </div>
 
       <div className="mb-4 flex gap-2">
-        <Button onClick={() => setIsModalOpen(true)} className="bg-black text-white p-2 dark:bg-black cursor-pointer"><FaPlus /></Button>
+<Button 
+  onClick={() => setIsModalOpen(true)}
+  className=" bg-gray-800 text-white rounded-md py-2 px-4 hover:bg-gray-700 cursor-pointer"
+>
+  Add Questions
+</Button>
+
         {/* <Button onClick={handleSetExam} className="bg-black text-white p-2 dark:bg-black cursor-pointer">Set Exam</Button> */}
-        <Button
-          className={`w-10 h-9 flex items-center justify-center cursor-pointer dark:bg-black ${isLocked ? 'bg-red-600 hover:bg-red-700' : 'bg-black'} text-white`}
-          onClick={handleLockToggle}
-        >
-          {isLocked ? <FaUnlock className="text-lg" /> : <FaLock className="text-lg" />}
-        </Button>
+<Button
+  onClick={handleLockToggle}
+  className={`flex items-center gap-2 px-4 py-2 rounded-md border text-sm font-medium transition cursor-pointer
+    ${isLocked 
+      ? 'border-gray-400 text-gray-900 bg-white hover:bg-gray-100 dark:bg-transparent dark:text-white dark:border-gray-600' 
+      : 'border-red-500 text-red-600 bg-white hover:bg-red-50 dark:bg-transparent dark:text-red-400 dark:border-red-400'}
+  `}
+>
+  {isLocked ? (
+    <>
+      <TbGitBranch className="text-base" />
+      <span>Unlock Exam</span>
+    </>
+  ) : (
+    <>
+      <TbGitBranch className="text-base" />
+      <span>Lock Exam</span>
+    </>
+  )}
+</Button>
+
+
+
+
       </div>
 
-      <FadeModal isOpen={isModalOpen} onClose={resetForm} className=" bg-blue-100">
-        <form onSubmit={handleSubmit} className="space-y-4 ">
-          <textarea
-            placeholder="Type question here"
-            value={newQuestion.question}
-            onChange={(e) => setNewQuestion({ ...newQuestion, question: e.target.value })}
-            required
-            className="w-full h-24 px-2 py-3 border-b border-gray-300 focus:outline-none focus:border-black bg-transparent placeholder-gray-500"
-          />
+     <FadeModal
+  isOpen={isModalOpen}
+  onClose={resetForm}
+  className="bg-blue-100 dark:bg-gray-900 p-6 rounded-2xl shadow-lg max-w-lg w-full mx-auto"
+>
+  <form onSubmit={handleSubmit} className="space-y-4">
+    <h2 className="text-xl font-semibold text-center text-gray-800 dark:text-gray-100">
+      {isEditing ? 'Edit Question' : 'Add New Question'}
+    </h2>
 
-          {['A', 'B', 'C', 'D'].map((label) => {
-            const key = `choice${label}`;
-            return (
-              <input
-                key={key}
-                type="text"
-                placeholder={`Choice ${label}`}
-                value={newQuestion[key]}
-                onChange={(e) => setNewQuestion({ ...newQuestion, [key]: e.target.value })}
-                required
-                className="w-full px-2 py-3 border-b border-gray-300 focus:outline-none focus:border-black bg-transparent placeholder-gray-500"
-              />
-            );
-          })}
+    {/* Question */}
+    <textarea
+      placeholder="Type your question here..."
+      value={newQuestion.question}
+      onChange={(e) =>
+        setNewQuestion({ ...newQuestion, question: e.target.value })
+      }
+      required
+      className="w-full h-28 px-3 py-3 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-500 resize-none"
+    />
 
+    {/* Choices */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {['A', 'B', 'C', 'D'].map((label) => {
+        const key = `choice${label}`;
+        return (
           <input
+            key={key}
             type="text"
-            placeholder="Enter Answer"
-            value={newQuestion.answer}
-            onChange={(e) => setNewQuestion({ ...newQuestion, answer: e.target.value })}
+            placeholder={`Option ${label}`}
+            value={newQuestion[key]}
+            onChange={(e) =>
+              setNewQuestion({ ...newQuestion, [key]: e.target.value })
+            }
             required
-            className="w-full px-2 py-3 border-b border-gray-300 focus:outline-none focus:border-black bg-transparent placeholder-gray-500"
+            className="w-full px-3 py-3 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-500"
           />
+        );
+      })}
+    </div>
 
-          <div className="flex justify-center">
-            <Button type="submit" className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800 transition cursor-pointer">
-              {isEditing ? 'Update' : 'Add'}
-            </Button>
-          </div>
-        </form>
-      </FadeModal>
+    {/* Correct Answer (Single Letter Only) */}
+    <input
+      type="text"
+      placeholder="Correct Answer (A, B, C, or D)"
+      value={newQuestion.answer}
+      onChange={(e) => {
+        const val = e.target.value.toUpperCase();
+        if (/^[ABCD]?$/.test(val)) {
+          setNewQuestion({ ...newQuestion, answer: val });
+        }
+      }}
+      required
+      maxLength={1}
+      className="w-80 mx-63 px-3 py-6 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-500 text-center uppercase"
+    />
 
-      <table className="min-w-full border-collapse border border-gray-400 mt-6">
-        <thead>
-          <tr>
-            <th className="border border-gray-400 p-2">#</th>
-            <th className="border border-gray-400 p-2">Question</th>
-            <th className="border border-gray-400 p-2 w-80">Choices</th>
-            <th className="border border-gray-400 p-2">Answer</th>
-            <th className="border border-gray-400 p-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {questions.map((q, index) => (
-            <tr key={q.id}>
-              <td className="border border-gray-400 p-2 text-center">{index + 1}</td>
-              <td className="border border-gray-400 p-2 text-center">{q.question}</td>
-              <td className="border border-gray-400 p-2 text-center">
-                <div className="flex flex-col items-start">
-                  {q.choices.map((choice, i) => (
-                    <div key={i}><strong>{String.fromCharCode(65 + i)}.</strong> {choice}</div>
-                  ))}
+    {/* Buttons */}
+    <div className="flex justify-center pt-2 gap-3">
+      {/* <Button
+        type="button"
+        onClick={resetForm}
+        className="bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-6 py-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
+      >
+        Cancel
+      </Button> */}
+      <Button
+        type="submit"
+        className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition-colors dark:bg-blue-600 dark:hover:bg-blue-700"
+      >
+        {isEditing ? 'Update Question' : 'Add Question'}
+      </Button>
+    </div>
+  </form>
+</FadeModal>
+
+
+<div className="border-b border-gray-300 rounded-xl overflow-hidden dark:border-gray-400 ">
+  <table className="min-w-full border bg-white dark:bg-gray-800 ">
+    <thead className="bg-gray-400 dark:bg-gray-700 ">
+      <tr className="border dark:border-gray-400 text-center">
+        <th className="border-b border-gray-300 p-2 w-10 text-center">#</th>
+        <th className="border-b border-gray-300 p-2 text-left">Question</th>
+        <th className="border-b border-gray-300 p-2 w-90 text-left">Choices</th>
+        <th className="border-b border-gray-300 p-2 w-20">Answer</th>
+        <th className="border-b border-gray-300 p-2 w-20 text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {questions.map((q, index) => (
+        <tr className="last:border-b-10 border-gray-400 border"  key={q.id}>
+          {/* Left border only on first cell */}
+          <td className="border-t border-l border-gray-300 p-2 text-center">
+            {index + 1}
+          </td>
+
+          <td className="border-t border-gray-300 p-2">{q.question}</td>
+
+          <td className="border-t border-gray-300 p-2 ">
+            <div className="flex flex-col items-start pl-2 space-y-1 ">
+              {q.choices.map((choice, i) => (
+                <div key={i}>
+                  <strong>{String.fromCharCode(65 + i)}.</strong> {choice}
                 </div>
-              </td>
-              <td className="border border-gray-400 p-2 text-center align-middle">{q.answer}</td>
-              <td className="border border-gray-400 p-2 text-center align-middle">
-                <div className="flex justify-center gap-2">
-                  <Button className='bg-white text-black hover:bg-gray-0 cursor-pointer' onClick={() => handleEdit(q)}>
-                    <FaEdit className="text-2xl" />
-                  </Button>
-                  <Button className='bg-white text-black hover:bg-gray-0 cursor-pointer' onClick={() => handleDelete(q.id)}>
-                    <FaTrash className="text-2xl" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              ))}
+            </div>
+          </td>
+
+          <td className="border-t border-gray-300 p-2 text-center ">{q.answer}</td>
+
+          {/* Right border only on last cell */}
+          <td className="border-t border-r border-gray-300 p-2 text-center dark:border-gray-400">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-32">
+                <DropdownMenuItem
+                  onClick={() => handleEdit(q)}
+                  className="flex items-center border-none cursor-pointer"
+                >
+                  <FaEdit className="mr-2 text-blue-600" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDelete(q.id)}
+                  className="flex items-center text-red-600 cursor-pointer dark:text-red-600"
+                >
+                  <FaTrash className="mr-2" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+
     </div>
   );
 }

@@ -9,6 +9,9 @@ import axios from 'axios';
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useRouter } from "next/navigation";
+import confetti from "canvas-confetti";
+import { motion } from "framer-motion";
+
 
 const StudentExam = () => {
 
@@ -30,16 +33,56 @@ const StudentExam = () => {
   const [similarity, setSimilarity] = useState(null);
   const [isStudentRegistered, setIsStudentRegistered] = useState(true);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [isAllowedStudent, setIsAllowedStudent] = useState(true);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const isRecognizingRef = useRef(false);
+  
+   const videoConstraints = {
+    width: 320,
+    height: 240,
+    facingMode: "user", // use "environment" if gusto mo back cam
+  };
 
-
-
+function ConfettiAnimation() {
   useEffect(() => {
-  const interval = setInterval(() => {
-    recognizeStudentFace();
-  }, 1000); // run every second
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
+  }, []);
+  return null;
+}
+//   useEffect(() => {
+//   const interval = setInterval(() => {
+//     recognizeStudentFace();
+//   }, 1000); // run every second
 
-  return () => clearInterval(interval);
+//   return () => clearInterval(interval);
+// }, []);
+
+
+useEffect(() => {
+  const video = videoRef.current;
+  const canvas = canvasRef.current;
+  const ctx = canvas.getContext("2d");
+
+  // Load MJPEG stream from Flask
+  const mjpegUrl = "http://localhost:5000/video";
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = mjpegUrl;
+
+  img.onload = function draw() {
+    const drawFrame = () => {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      requestAnimationFrame(drawFrame);
+    };
+    drawFrame();
+  };
 }, []);
+
 
 useEffect(() => {
   if (!examId) return;
@@ -52,40 +95,74 @@ useEffect(() => {
 }, [examId]);
 
 
+useEffect(() => {
+  const interval = setInterval(() => {
+    recognizeStudentFace();
+  }, 500); // faster response
+  return () => clearInterval(interval);
+}, []);
+
 const recognizeStudentFace = async () => {
-  const videoElement = document.getElementById("video-stream");
-  const canvas = document.getElementById("video-canvas");
-
-  if (!videoElement || !canvas) return;
-
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-  const imageDataUrl = canvas.toDataURL("image/jpeg");
+  if (isRecognizingRef.current) return;
+  isRecognizingRef.current = true;
 
   try {
-    const response = await fetch("http://localhost:5000/student/recognize", {
+    const videoElement = document.getElementById("video-stream");
+    const canvas = document.getElementById("video-canvas");
+    if (!videoElement || !canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+    const imageDataUrl = canvas.toDataURL("image/jpeg");
+
+    const response = await fetch("http://localhost:5000/student/recognize/live", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ image: imageDataUrl }),
     });
 
     const data = await response.json();
-    const newName = data?.name || "No Face Detected";
-    const newSimilarity = data?.similarity ?? null;
+    const recognized = data?.name || "No Face Detected";
+    const similarity = data?.similarity ?? 0;
+    const currentStudent = localStorage.getItem("student_name");
 
-    setRecognizedName(newName);
-    setSimilarity(newSimilarity);
+    setRecognizedName(recognized);
+    setSimilarity(similarity);
 
-    const notRegistered = newName === "Student Not Registered" || (newSimilarity && newSimilarity < 0.92);
-    setIsStudentRegistered(!notRegistered);
+    if (recognized === "Student Not Registered") {
+      // ❌ Block immediately if not in DB
+      setIsStudentRegistered(false);
+      setIsAllowedStudent(false);
+      setNoFaceDetected(false);
+      return;
+    }
+
+    if (recognized === "No Face Detected") {
+      setNoFaceDetected(true);
+      setIsAllowedStudent(false);
+      return;
+    }
+
+    if (recognized === currentStudent && similarity >= 0.93) {
+      setIsStudentRegistered(true);
+      setIsAllowedStudent(true);
+      setNoFaceDetected(false);
+      return;
+    }
+
+    // ❌ Any other recognized face (different student) = block
+    setIsStudentRegistered(true);
+    setIsAllowedStudent(false);
+    setNoFaceDetected(false);
 
   } catch (error) {
     console.error("Recognition failed:", error);
     setRecognizedName("Recognition Failed");
     setSimilarity(null);
+  } finally {
+    isRecognizingRef.current = false;
   }
 };
-
 
 
   useEffect(() => {
@@ -210,6 +287,12 @@ const checkExamLockStatus = async (examId) => {
     }
   };
 const handleSubmitExam = async () => {
+  // check kung lahat ng tanong may sagot
+  if (Object.keys(selectedOption).length < questions.length) {
+    toast.error("Please answer all questions before submitting.");
+    return;
+  }
+
   const score = calculateScore();
   const totalQuestions = questions.length;
   const eyeMovements = JSON.stringify(eyeData);
@@ -223,7 +306,7 @@ const handleSubmitExam = async () => {
     const res = await axios.post('http://localhost:5000/results/student', {
       student_id: studentId,
       exam_id: examId,
-      score: `${score}/${totalQuestions}`, // ✅ string format "3/4"
+      score: `${score}/${totalQuestions}`, 
       eye_movements: eyeMovements,
       first_name: studentInfo.firstName,
       last_name: studentInfo.lastName
@@ -242,6 +325,7 @@ const handleSubmitExam = async () => {
     toast.error('Error submitting results: ' + (error.response?.data.error || error.message));
   }
 };
+
 
 
 const calculateScore = () => {
@@ -266,7 +350,7 @@ const calculateScore = () => {
 
 
   return (
-    <div style={{ backgroundColor: "#CCD9FC" }} className="flex flex-col justify-center min-h-screen p-4 relative">
+    <div style={{ backgroundColor: "#CCD9FC" }} className="flex flex-col justify-center min-h-screen p-4 relative font-sans">
      {(isLocked || noFaceDetected || eyeDirectionWarning || !isStudentRegistered) && (
   <div
     style={{
@@ -299,29 +383,32 @@ const calculateScore = () => {
 
       {!isLocked && (
   <>
-    {eyeDirectionWarning && (
+    {eyeDirectionWarning ? (
       <Alert
         variant="destructive"
-        className="bg-red-900 max-w-md mx-auto px-4 py-5 border border-white rounded-lg text-white text-center"
+        className="bg-red-900 max-w-2xl mx-auto px-8 py-10 border border-white rounded-2xl text-white text-center shadow-xl"
       >
-        <AlertCircle className="h-6 w-6 mx-auto" />
-        <AlertTitle className="text-white sm:text-base md:text-lg lg:text-2xl font-bold px-2">
+        <AlertCircle className="h-6 w-6 mx-auto mb-4" />
+        <AlertTitle className="text-white text-xl md:text-3xl font-bold px-4 leading-snug">
           Please stay in front of the camera.
         </AlertTitle>
       </Alert>
-    )}
-
-    {!eyeDirectionWarning && !isStudentRegistered && (
-      <Alert
+    ) : (
+      !isLocked && !noFaceDetected && !isAllowedStudent && (
+        <Alert
         variant="destructive"
-        className="bg-red-900 max-w-md mx-auto px-4 py-5 border border-white rounded-lg text-white text-center"
+        className="bg-red-900 max-w-2xl mx-auto px-8 py-10 border border-white rounded-2xl text-white text-center shadow-xl"
       >
-        <AlertCircle className="h-6 w-6 mx-auto" />
-        <AlertTitle className="text-white text-2xl font-bold px-2">
-          Student Not Registered
+        <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+        <AlertTitle className="text-white text-xl md:text-3xl font-bold px-4 leading-snug">
+          You are not allowed to take this exam
         </AlertTitle>
       </Alert>
+      
+      )
     )}
+
+
   </>
 )}
 
@@ -329,110 +416,136 @@ const calculateScore = () => {
   </div>
 )}
 
+{/* --- Quizizz style success screen --- */}
 {showSuccessAnimation && (
-  <div className="fixed inset-0 flex flex-col items-center justify-center z-[9999] bg-transparent">
-    <svg
-      className="animate-bounce-check"
-      width="100"
-      height="100"
-      viewBox="0 0 52 52"
+  <div className="fixed inset-0 flex flex-col items-center justify-center z-[9999] bg-white">
+    {/* Animated checkmark + text */}
+    <motion.div
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ type: "spring", stiffness: 120, damping: 10 }}
+      className="flex flex-col items-center"
     >
-      <circle
-        cx="26"
-        cy="26"
-        r="25"
-        fill="none"
-        stroke="#4CAF50"
-        strokeWidth="4"
-      />
-      <path
-        className="checkmark-path"
-        fill="none"
-        stroke="#4CAF50"
-        strokeWidth="4"
-        d="M14 27l7 7 16-16"
-        strokeDasharray="40"
-        strokeDashoffset="40"
-      />
-    </svg>
-    <p className="text-green-600 text-2xl mt-4 font-bold">Results submitted successfully!</p>
+      {/* <div className="w-24 h-24 flex items-center justify-center rounded-full bg-green-500 text-white shadow-lg">
+        <AlertCircle className="w-12 h-12" />
+      </div> */}
+      <h1 className="mt-6 text-6xl font-bold text-green-600">ALL DONE!</h1>
+      {/* <p className="text-gray-600 mt-2 text-lg">Results submitted successfully 🎉</p> */}
+    </motion.div>
+
+    {/* Trigger confetti on mount */}
+    <ConfettiAnimation />
   </div>
 )}
 
 
       {!isExamCompleted ? (
-        <div className="flex">
-          <div className="flex-1 space-y-12">
-            <div style={{ width: '170%', height: 250, backgroundColor: "#A3ADC9" }} className="rounded-lg shadow-lg p-20 text-black text-4xl font-bold">
-              <h3>{questions[currentQuestion]?.question}</h3>
-            </div>
+      <div className="flex flex-col w-full h-full space-y-6">
+  {/* Questions (top, full width) */}
+<div className="rounded-lg shadow-lg p-6 bg-[#f5f5f5] text-black text-4xl font-bold h-[400px]">
+    <h3 className="text-5xl font-bold mt-40">{questions[currentQuestion]?.question}</h3>
+  </div>
 
-            <div style={{ height: 470, backgroundColor: "#A3ADC9" }} className="rounded-lg shadow-lg p-20 space-y-8">
-              {['A', 'B', 'C', 'D'].map((letter) => {
-                const optionKey = `choice${letter}`;
-                return (
-                  <div key={letter} className="flex items-center">
-                    <input
-                      type="radio"
-                      name={`question-${currentQuestion}`}
-                      value={questions[currentQuestion]?.[optionKey]}
-                      checked={selectedOption[currentQuestion] === letter}
-                      onChange={() => handleOptionSelect(letter)}
-                      className="mr-6 w-4 h-4"
-                    />
-                    <label className="text-xl">{questions[currentQuestion]?.[optionKey]}</label>
-                  </div>
-                );
-              })}
-
-              <div className="flex justify-between mt-8">
-                {currentQuestion > 0 && (
-                  <Button onClick={handlePreviousQuestion} className="bg-gray-500 text-white hover:bg-gray-600 cursor-pointer">Back</Button>
-                )}
-                {currentQuestion === questions.length - 1 ? (
-                  <Button onClick={handleSubmitExam} className="bg-green-500 text-white hover:bg-green-600 cursor-pointer">Submit</Button>
-                ) : (
-                  <Button onClick={handleNextQuestion} className="bg-blue-500 text-white hover:bg-blue-600 cursor-pointer">Next</Button>
-                )}
-              </div>
-            </div>
+  {/* Bottom section: Choices (left) + Webcam (right) */}
+  <div className="flex flex-row justify-between w-full space-x-6">
+    {/* Choices (left side) */}
+<div className="flex-1 rounded-lg shadow-lg p-6 bg-[#f5f5f5] space-y-4 h-[300px]">
+      {['A', 'B', 'C', 'D'].map((letter) => {
+        const optionKey = `choice${letter}`;
+        return (
+          <div key={letter} className="flex items-center">
+            <input
+              type="radio"
+              name={`question-${currentQuestion}`}
+              value={questions[currentQuestion]?.[optionKey]}
+              checked={selectedOption[currentQuestion] === letter}
+              onChange={() => handleOptionSelect(letter)}
+              className="mr-3 w-4 h-4"
+            />
+            <label className="text-lg font-semibold">
+              {questions[currentQuestion]?.[optionKey]}
+            </label>
           </div>
+        );
+      })}
 
-        <div className="flex-col items-center ml-6">
-  <div className="mt-80 relative">
-    <img
-      id="video-stream"
-      src="http://localhost:5000/video"
-      alt="Webcam Feed"
-      className="rounded-lg shadow-lg w-full max-w-[640px] h-[480px]"
-      crossOrigin="anonymous"
-    />
-    <canvas id="video-canvas" width="640" height="480" style={{ display: "none" }} />
-    
-    {recognizedName &&
-      recognizedName !== "Recognition Failed" &&
-      recognizedName !== "No Face Detected" && (
-        <div
-          className={`absolute bottom-4 left-4 px-4 py-2 rounded-md text-lg font-bold shadow-lg ${
-            recognizedName === "Student Not Registered" || (similarity && similarity < 0.92)
-              ? "bg-red-600 text-white"
-              : "bg-green-500 text-white"
-          }`}
-        >
-          <p>{recognizedName}</p>
-          {similarity && (
-            <p className="text-sm font-light">
-              ({(similarity * 100).toFixed(2)}%{" "}
-              {recognizedName === "Student Not Registered" ? "unmatch" : "match"})
-            </p>
-          )}
-        </div>
-    )}
+      {/* Buttons */}
+      <div className="flex justify-between mt-6 cursor-pointer">
+        {currentQuestion > 0 && (
+          <Button
+            onClick={handlePreviousQuestion}
+            className="bg-gray-300 text-black hover:bg-gray-400 cursor-pointer"
+          >
+            Back
+          </Button>
+        )}
+        {currentQuestion === questions.length - 1 ? (
+          <Button
+            onClick={handleSubmitExam}
+            className="bg-green-500 text-white hover:bg-green-600 cursor-pointer"
+          >
+            Submit
+          </Button>
+        ) : (
+          <Button
+            onClick={handleNextQuestion}
+            className="bg-blue-500 text-white hover:bg-blue-600 cursor-pointer"
+          >
+            Next
+          </Button>
+        )}
+      </div>
+    </div>
+
+    {/* Webcam (right side) */}
+    <div className="w-[320px] h-[250px] rounded-lg shadow-lg bg-[#f5f5f5] relative overflow-hidden">
+  <video
+    id="video-stream"
+    ref={videoRef}
+    autoPlay
+    playsInline
+    muted
+    className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
+  />
+  <canvas
+    id="video-canvas"
+    ref={canvasRef}
+    width="320"
+    height="240"
+    className="absolute top-0 left-0 w-full h-full rounded-lg"
+  />
+
+      {recognizedName &&
+        recognizedName !== "Recognition Failed" &&
+        recognizedName !== "No Face Detected" && (
+          <div
+            className={`absolute bottom-2 left-2 px-3 py-1 rounded-md text-sm font-bold shadow-lg ${
+              recognizedName === "Student Not Registered" ||
+              (similarity && similarity < 0.92)
+                ? "bg-red-600 text-white"
+                : "bg-green-500 text-white"
+            }`}
+          >
+            <p>{recognizedName}</p>
+            {similarity && (
+              <p className="text-xs font-light">
+                ({(similarity * 100).toFixed(2)}%{" "}
+                {recognizedName === "Student Not Registered"
+                  ? "unmatch"
+                  : "match"}
+                )
+              </p>
+            )}
+          </div>
+        )}
+    </div>
   </div>
 </div>
 
 
-        </div>
+
+
+        
       ) : (
         <div>{/* Thank you or summary page */}</div>
       )}

@@ -8,6 +8,18 @@ export default function ThankYou() {
   const [firstName, setFirstName] = useState(null);
   const [lastName, setLastName] = useState(null);
   const router = useRouter();
+  
+    useEffect(() => {
+    // Safely try playing the success sound
+    const audio = new Audio("/success-tone.mp3");
+
+    audio
+      .play()
+      .catch((err) => {
+        console.warn("Audio failed to play. Check file or browser autoplay policy:", err);
+      });
+  }, []);
+
 
   useEffect(() => {
     // Wait for client-side rendering

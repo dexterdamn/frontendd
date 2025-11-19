@@ -11,34 +11,27 @@ export default function StartButton() {
 
   const [examReady, setExamReady] = useState(false);
 
-const handleStart = () => {
-  const storedExamId = localStorage.getItem("examId");
-  const ready = localStorage.getItem(`examReady_${storedExamId}`) === "true";
+  const handleStart = () => {
+    if (!examReady) {
+      toast.error("The exam is locked. Please wait for the admin to unlock it.");
+      return;
+    }
+    router.push("/student-exam");
+  };
 
-  // Always proceed to student exam regardless of stored exam ID or readiness
-  router.push("/student-exam");
-};
+  const handleBack = () => {
+    router.push("/student-dashboard"); // Go directly to student dashboard
+  };
 
+  const checkExamReady = () => {
+    if (!examId) return;
 
-const handleBack = () => {
-  router.push("/student-dashboard"); // Go directly to student dashboard
-};
+    const locked = localStorage.getItem(`examLocked_${examId}`) === "true";
+    const ready = localStorage.getItem(`examReady_${examId}`) === "true";
 
-const checkExamReady = () => {
-  if (!examId) return;
-
-  // Default to ready if values are missing
-  const locked = localStorage.getItem(`examLocked_${examId}`) === "true";
-  setExamReady(!locked);
-};
-
-  
-  // const checkExamReady = () => {
-  //   if (!examId) return;
-  //   const ready = localStorage.getItem(`examReady_${examId}`) === "true";
-  //   const locked = localStorage.getItem(`examLocked_${examId}`) === "true";
-  //   setExamReady(ready && !locked);
-  // };
+    // START button only enabled if exam is ready and not locked
+    setExamReady(ready && !locked);
+  };
 
   useEffect(() => {
     if (examId) {
@@ -62,21 +55,19 @@ const checkExamReady = () => {
   }, [examId]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-blue-100 p-4">
+    <div className="flex flex-col items-center justify-center h-screen bg-blue-100 p-4 font-sans relative">
       {/* Back Button */}
-<div className="absolute top-6 left-6">
-  <Button
-    onClick={handleBack}
-    className="bg-white cursor-pointer text-blue-600 border border-blue-600 
-               hover:bg-white hover:text-blue transition-all duration-300 ease-in-out 
-               rounded-2 px-5 py-5 shadow-md transform hover:-translate-x-1"
-  >
-    <span className="text-2xl mr-1">←</span>
-    <span className="text-base sm:text-lg">Back</span>
-  </Button>
-</div>
-
-
+      <div className="absolute top-6 left-6">
+        <Button
+          onClick={handleBack}
+          className="bg-white cursor-pointer text-blue-600 border border-blue-600 
+                   hover:bg-white hover:text-blue transition-all duration-300 ease-in-out 
+                   rounded-2 px-5 py-5 shadow-md transform hover:-translate-x-1"
+        >
+          <span className="text-2xl mr-1">←</span>
+          <span className="text-base sm:text-lg">Back</span>
+        </Button>
+      </div>
 
       {/* Start Button */}
       <div className="flex flex-col items-center space-y-4">

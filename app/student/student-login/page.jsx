@@ -17,6 +17,8 @@ export default function StudentLoginPage() {
   const [loginStage, setLoginStage] = useState("idle"); // idle | loading | matchCheck | checkShow | done
   const webcamRef = useRef(null);
   const router = useRouter();
+  const [liveKeypoints, setLiveKeypoints] = useState(null);
+const [dbKeypoints, setDbKeypoints] = useState(null);
 
   const videoConstraints = {
     width: 640,
@@ -25,36 +27,42 @@ export default function StudentLoginPage() {
   };
 
   // 👁 Capture face and send to backend for recognition
-  const recognizeLiveFace = async () => {
-    if (!webcamRef.current) return;
-    const imageSrc = webcamRef.current.getScreenshot();
-    if (!imageSrc) {
-      setRecognizedName("No Face Detected");
-      setSimilarity(null);
-      setHasRecognized(false);
-      return;
-    }
-    try {
-      const response = await fetch("http://localhost:5000/student/recognize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageSrc }),
-      });
-      const data = await response.json();
-      const newName = data?.name || "No Face Detected";
-      const newSimilarity = data?.similarity ?? null;
-      setRecognizedName(newName);
-      setRecognizedEmail(data?.email || "");
-      setSimilarity(newSimilarity);
-      const recognized = !["Student Not Registered", "No Face Detected", "Recognition Failed"].includes(newName);
-      setHasRecognized(recognized);
-    } catch (error) {
-      console.error("Recognition failed:", error);
-      setRecognizedName("Recognition Failed");
-      setSimilarity(null);
-      setHasRecognized(false);
-    }
-  };
+ const recognizeLiveFace = async () => {
+  if (!webcamRef.current) return;
+  const imageSrc = webcamRef.current.getScreenshot();
+  if (!imageSrc) {
+    setRecognizedName("No Face Detected");
+    setSimilarity(null);
+    setHasRecognized(false);
+    return;
+  }
+  try {
+    const response = await fetch("http://localhost:5000/student/recognize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: imageSrc }),
+    });
+    const data = await response.json();
+
+    const newName = data?.name || "No Face Detected";
+    const newSimilarity = data?.similarity ?? null;
+    setRecognizedName(newName);
+    setRecognizedEmail(data?.email || "");
+    setSimilarity(newSimilarity);
+
+    // 👇 Save keypoints automatically
+    setLiveKeypoints(data?.live_keypoints || null);
+    setDbKeypoints(data?.db_keypoints || null);
+
+    const recognized = !["Student Not Registered", "No Face Detected", "Recognition Failed"].includes(newName);
+    setHasRecognized(recognized);
+  } catch (error) {
+    console.error("Recognition failed:", error);
+    setRecognizedName("Recognition Failed");
+    setSimilarity(null);
+    setHasRecognized(false);
+  }
+};
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -83,8 +91,16 @@ export default function StudentLoginPage() {
       toast.error("Email and password are required!");
       return;
     }
+
+
+    // 🚫 Kapag walang face (No Face Detected)
+  if (recognizedName === "No Face Detected") {
+    toast.error("Face required for login. Please position your face in front of the camera.");
+    return;
+  }
+  
     if (!hasRecognized || !similarity || similarity < 0.95) {
-      toast.error("We couldn’t confirm your identity. Please try again.");
+      toast.error("Student not registered.");
       return;
     }
 
@@ -275,7 +291,7 @@ export default function StudentLoginPage() {
                 <div
                   className={`absolute bottom-4 left-4 px-4 py-2 rounded-md text-lg font-bold shadow-lg ${
                     recognizedName === "Student Not Registered" ||
-                    (similarity && similarity < 0.92)
+                    (similarity && similarity < 0.95)
                       ? "bg-red-600 text-white"
                       : recognizedName === "No Face Detected"
                       ? "bg-yellow-400 text-black"
@@ -284,22 +300,24 @@ export default function StudentLoginPage() {
                       : "bg-green-500 text-white"
                   }`}
                 >
-                  {recognizedName === "No Face Detected" ? (
-                    <p>{recognizedName}</p>
-                  ) : (
-                    <div>
-                      <p>{recognizedName}</p>
-                      {similarity && (
-                        <p className="text-sm font-light">
-                          ({(similarity * 100).toFixed(2)}%{" "}
-                          {recognizedName === "Student Not Registered"
-                            ? "unmatch"
-                            : "match"}
-                          )
-                        </p>
-                      )}
-                    </div>
-                  )}
+{recognizedName === "No Face Detected" ? (
+  <p>{recognizedName}</p>
+) : (
+  <div>
+    <p>{recognizedName}</p>
+    {similarity !== null && (
+      <p className="text-sm font-light">
+        ({(similarity * 100).toFixed(2)}%{" "}
+        {recognizedName === "Student Not Registered" ||
+        similarity < 0.95
+          ? "Unmatch"
+          : "Match"}
+        )
+      </p>
+    )}
+  </div>
+)}
+
                 </div>
               )}
             </div>

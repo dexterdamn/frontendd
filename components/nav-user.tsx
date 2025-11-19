@@ -108,8 +108,8 @@ const handleLogout = () => {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <ThemeProvider attribute="class"  defaultTheme="system" enableSystem>
-              <div className="cursor-pointer">
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              <div className="cursor-pointer font-sans text-sm">
               <ModeToggle  />Theme
               </div>
             </ThemeProvider>
@@ -118,10 +118,10 @@ const handleLogout = () => {
                 <BadgeCheck />
                 Account
               </DropdownMenuItem> */}
-              <DropdownMenuItem className="cursor-pointer">
+              {/* <DropdownMenuItem className="cursor-pointer">
                 <Bell />
                 Notifications
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
